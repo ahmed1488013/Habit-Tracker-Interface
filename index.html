@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HabitBoost Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #FAF3E0;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #FF6347;
+      color: white;
+      text-align: center;
+      padding: 1rem 0;
+    }
+    main {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .habit-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .habit-form input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    .habit-form button {
+      background-color: #228B22;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .habit-form button:hover {
+      background-color: #1A6E1A;
+    }
+    .habit-list {
+      list-style: none;
+      padding: 0;
+    }
+    .habit-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #FF6347;
+      color: white;
+    }
+    .habit-item.completed {
+      background-color: #228B22;
+    }
+    .habit-item span {
+      font-weight: bold;
+    }
+    .habit-item .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .habit-item .progress-bar {
+      flex: 1;
+      height: 10px;
+      background: #ccc;
+      border-radius: 5px;
+      position: relative;
+      overflow: hidden;
+    }
+    .habit-item .progress-bar span {
+      display: block;
+      height: 100%;
+      background: #228B22;
+      transition: width 0.3s ease;
+    }
+    .habit-item button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: white;
+      font-size: 16px;
+    }
+    .habit-item button:hover {
+      opacity: 0.8;
+    }
+    .streak {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .streak p {
+      margin: 0;
+    }
+    @media (max-width: 600px) {
+      .habit-form {
+        flex-direction: column;
+      }
+      .habit-form button {
+        width: 100%;
+      }
+      .habit-item {
+        flex-direction: column;
+      }
+      .habit-item .progress-container {
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HabitBoost Tracker</h1>
+  </header>
+  <main>
+    <form class="habit-form" id="habitForm">
+      <input type="text" id="habitInput" placeholder="Enter a new habit" required>
+      <button type="submit">Add Habit</button>
+    </form>
+    <ul class="habit-list" id="habitList">
+      <!-- Habits will appear here -->
+    </ul>
+    <div class="streak" id="streak">
+      <p>Total Streaks: <span id="totalStreak">0</span></p>
+    </div>
+  </main>
+  <script>
+    const habitForm = document.getElementById('habitForm');
+    const habitInput = document.getElementById('habitInput');
+    const habitList = document.getElementById('habitList');
+    const totalStreak = document.getElementById('totalStreak');
+
+    const habits = JSON.parse(localStorage.getItem('habits')) || [];
+
+    let streakCount = habits.filter(habit => habit.completed).length;
+    totalStreak.textContent = streakCount;
+
+    habits.forEach(renderHabit);
+
+    habitForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const habitName = habitInput.value.trim();
+      if (habitName) {
+        const newHabit = { name: habitName, completed: false, streak: 0 };
+        habits.push(newHabit);
+        renderHabit(newHabit);
+        saveHabits();
+        habitInput.value = '';
+      }
+    });
+
+    function renderHabit(habit) {
+      const li = document.createElement('li');
+      li.className = `habit-item ${habit.completed ? 'completed' : ''}`;
+
+      const span = document.createElement('span');
+      span.textContent = habit.name;
+
+      const progressContainer = document.createElement('div');
+      progressContainer.className = 'progress-container';
+
+      const progressBar = document.createElement('div');
+      progressBar.className = 'progress-bar';
+
+      const progressFill = document.createElement('span');
+      progressFill.style.width = `${habit.streak * 10}%`;
+      progressBar.appendChild(progressFill);
+
+      const streakText = document.createElement('span');
+      streakText.textContent = `Streak: ${habit.streak} days`;
+
+      progressContainer.appendChild(progressBar);
+      progressContainer.appendChild(streakText);
+
+      const completeButton = document.createElement('button');
+      completeButton.textContent = '✔';
+      completeButton.addEventListener('click', () => {
+        habit.completed = !habit.completed;
+        if (habit.completed) habit.streak++;
+        else habit.streak = Math.max(0, habit.streak - 1);
+        li.classList.toggle('completed');
+        progressFill.style.width = `${habit.streak * 10}%`;
+        streakText.textContent = `Streak: ${habit.streak} days`;
+        updateStreak();
+        saveHabits();
+      });
+
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = '❌';
+      deleteButton.addEventListener('click', () => {
+        const index = habits.indexOf(habit);
+        habits.splice(index, 1);
+        habitList.removeChild(li);
+        updateStreak();
+        saveHabits();
+      });
+
+      li.appendChild(span);
+      li.appendChild(progressContainer);
+      li.appendChild(completeButton);
+      li.appendChild(deleteButton);
+      habitList.appendChild(li);
+    }
+
+    function saveHabits() {
+      localStorage.setItem('habits', JSON.stringify(habits));
+    }
+
+    function updateStreak() {
+      streakCount = habits.filter(habit => habit.completed).length;
+      totalStreak.textContent = streakCount;
+    }
+  </script>
+</body>
+</html>
